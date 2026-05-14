@@ -10,7 +10,7 @@ export default function App() {
   return (
     <div className="app">
       <nav>
-        <h1>💧 Neer Seva — Bengaluru Water Delivery</h1>
+        <h1>Poseidon💧</h1>
         <button
           className={view === 'citizen' ? 'active' : ''}
           onClick={() => setView('citizen')}

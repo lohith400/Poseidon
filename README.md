@@ -1,4 +1,4 @@
-# 💧 Neer Seva — Bengaluru Water Delivery System
+# 💧 Poseidon — Bengaluru Water Delivery System
 
 An intelligent water tanker delivery platform for Bengaluru that assigns citizens to their nearest BWSSB water hub and uses a **TSP (Travelling Salesman Problem) nearest-neighbor algorithm** to optimize each driver's route — minimizing fuel consumption and delivery time.
 
