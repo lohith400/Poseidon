@@ -3,44 +3,237 @@ import OrderForm from './components/OrderForm'
 import AdminDashboard from './components/AdminDashboard'
 import DriverView from './components/DriverView'
 
+const HUB_OPTIONS = [
+  { id: 1, name: 'Whitefield Depot' },
+  { id: 2, name: 'Koramangala Tank' },
+  { id: 3, name: 'Hebbal Depot' },
+  { id: 4, name: 'Electronic City Depot' },
+  { id: 5, name: 'Jayanagar Tank' },
+  { id: 6, name: 'HSR Layout Borewell' },
+  { id: 7, name: 'Yelahanka Depot' },
+  { id: 8, name: 'Marathahalli Tank' },
+]
+
 export default function App() {
-  const [view, setView] = useState('citizen')
-  const [orderCount, setOrderCount] = useState(0)
+  const [currentRole, setCurrentRole] = useState(null)
+  const [currentUser, setCurrentUser] = useState(null)
+  const [selectedRole, setSelectedRole] = useState('citizen')
+  const [loginError, setLoginError] = useState('')
 
+  // Citizen fields
+  const [citizenName, setCitizenName] = useState('')
+  const [citizenPass, setCitizenPass] = useState('')
+  // Driver fields
+  const [driverName, setDriverName] = useState('')
+  const [driverHubId, setDriverHubId] = useState(1)
+  const [driverPass, setDriverPass] = useState('')
+  // Admin fields
+  const [adminUser, setAdminUser] = useState('')
+  const [adminPass, setAdminPass] = useState('')
+
+  function pickRole(role) {
+    setSelectedRole(role)
+    setLoginError('')
+  }
+
+  function doLogin() {
+    setLoginError('')
+    if (selectedRole === 'citizen') {
+      if (!citizenName.trim()) { setLoginError('Please enter your name.'); return }
+      if (citizenPass !== 'citizen123') { setLoginError('Incorrect password. Hint: citizen123'); return }
+      setCurrentUser(citizenName.trim())
+    } else if (selectedRole === 'driver') {
+      if (!driverName.trim()) { setLoginError('Please enter your name.'); return }
+      if (driverPass !== 'driver123') { setLoginError('Incorrect password. Hint: driver123'); return }
+      setCurrentUser(driverName.trim())
+    } else {
+      if (!adminUser.trim()) { setLoginError('Please enter admin username.'); return }
+      if (adminPass !== 'admin123') { setLoginError('Incorrect password. Hint: admin123'); return }
+      setCurrentUser(adminUser.trim())
+    }
+    setCurrentRole(selectedRole)
+  }
+
+  function logout() {
+    setCurrentRole(null)
+    setCurrentUser(null)
+    setCitizenName(''); setCitizenPass('')
+    setDriverName(''); setDriverPass('')
+    setAdminUser(''); setAdminPass('')
+    setSelectedRole('citizen')
+    setLoginError('')
+  }
+
+  const roleLabels = { citizen: '🏠 Citizen', driver: '🚛 Driver', admin: '⚙️ Admin' }
+
+  // ─── Authenticated View ───
+  if (currentRole) {
+    return (
+      <div id="app">
+        <nav className="topnav">
+          <div className="nav-brand">Poseidon 💧</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span className="nav-user">{currentUser}</span>
+            <span className={`nav-role-badge role-${currentRole}`}>
+              {roleLabels[currentRole]}
+            </span>
+            <button className="btn-logout" onClick={logout}>Sign Out</button>
+          </div>
+        </nav>
+
+        {currentRole === 'citizen' && <OrderForm userName={currentUser} />}
+        {currentRole === 'driver'  && <DriverView driverName={currentUser} defaultHubId={driverHubId} />}
+        {currentRole === 'admin'   && <AdminDashboard />}
+      </div>
+    )
+  }
+
+  // ─── Login Screen ───
   return (
-    <div className="app">
-      <nav>
-        <h1>Poseidon💧</h1>
-        <button
-          className={view === 'citizen' ? 'active' : ''}
-          onClick={() => setView('citizen')}
-        >
-          🏠 Book Water
-        </button>
-        <button
-          className={view === 'admin' ? 'active' : ''}
-          onClick={() => setView('admin')}
-        >
-          ⚙ Admin
-        </button>
-        <button
-          className={view === 'driver' ? 'active' : ''}
-          onClick={() => setView('driver')}
-        >
-          🚛 Driver
-        </button>
-      </nav>
+    <div id="app">
+      <div id="login-screen">
 
-      <div className="page">
-        {view === 'citizen' && (
-          <OrderForm onOrderPlaced={() => setOrderCount(c => c + 1)} />
-        )}
-        {view === 'admin' && (
-          <AdminDashboard key={orderCount} />
-        )}
-        {view === 'driver' && (
-          <DriverView />
-        )}
+        <div className="login-hero">
+          <div className="logo">POSEIDON</div>
+          <p>Water Tanker Delivery — Bengaluru Smart Routing</p>
+        </div>
+
+        {/* Role Picker */}
+        <div className="role-selector">
+          <div
+            className={`role-card citizen${selectedRole === 'citizen' ? ' selected' : ''}`}
+            onClick={() => pickRole('citizen')}
+          >
+            <div className="role-icon">🏠</div>
+            <div className="role-name">Citizen</div>
+            <div className="role-desc">Book water delivery</div>
+          </div>
+          <div
+            className={`role-card driver${selectedRole === 'driver' ? ' selected' : ''}`}
+            onClick={() => pickRole('driver')}
+          >
+            <div className="role-icon">🚛</div>
+            <div className="role-name">Driver</div>
+            <div className="role-desc">View your route</div>
+          </div>
+          <div
+            className={`role-card admin${selectedRole === 'admin' ? ' selected' : ''}`}
+            onClick={() => pickRole('admin')}
+          >
+            <div className="role-icon">⚙️</div>
+            <div className="role-name">Admin</div>
+            <div className="role-desc">Manage operations</div>
+          </div>
+        </div>
+
+        {/* Login Form */}
+        <div className="login-form-wrap">
+          <div className="login-box">
+            <h2>
+              Sign in as{' '}
+              {selectedRole === 'citizen' ? 'Citizen' : selectedRole === 'driver' ? 'Driver' : 'Admin'}
+            </h2>
+
+            {/* Citizen Fields */}
+            {selectedRole === 'citizen' && (
+              <>
+                <div className="form-group">
+                  <label>Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Ravi Kumar"
+                    value={citizenName}
+                    onChange={e => setCitizenName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && doLogin()}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={citizenPass}
+                    onChange={e => setCitizenPass(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && doLogin()}
+                  />
+                  <div className="hint-text">Demo password: citizen123</div>
+                </div>
+              </>
+            )}
+
+            {/* Driver Fields */}
+            {selectedRole === 'driver' && (
+              <>
+                <div className="form-group">
+                  <label>Driver Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Ramesh"
+                    value={driverName}
+                    onChange={e => setDriverName(e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Assigned Hub</label>
+                  <select value={driverHubId} onChange={e => setDriverHubId(parseInt(e.target.value))}>
+                    {HUB_OPTIONS.map(h => (
+                      <option key={h.id} value={h.id}>{h.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={driverPass}
+                    onChange={e => setDriverPass(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && doLogin()}
+                  />
+                  <div className="hint-text">Demo password: driver123</div>
+                </div>
+              </>
+            )}
+
+            {/* Admin Fields */}
+            {selectedRole === 'admin' && (
+              <>
+                <div className="form-group">
+                  <label>Admin Username</label>
+                  <input
+                    type="text"
+                    placeholder="admin"
+                    value={adminUser}
+                    onChange={e => setAdminUser(e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={adminPass}
+                    onChange={e => setAdminPass(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && doLogin()}
+                  />
+                  <div className="hint-text">Demo password: admin123</div>
+                </div>
+              </>
+            )}
+
+            {loginError && (
+              <div className="alert alert-error">⚠ {loginError}</div>
+            )}
+
+            <button
+              className={`btn btn-${selectedRole} btn-full`}
+              onClick={doLogin}
+            >
+              Sign In →
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   )
