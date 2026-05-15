@@ -2,17 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 
 const API = 'http://localhost:8000'
 
-const HUB_OPTIONS = [
-  { id: 1, name: 'Whitefield Depot' },
-  { id: 2, name: 'Koramangala Tank' },
-  { id: 3, name: 'Hebbal Depot' },
-  { id: 4, name: 'Electronic City Depot' },
-  { id: 5, name: 'Jayanagar Tank' },
-  { id: 6, name: 'HSR Layout Borewell' },
-  { id: 7, name: 'Yelahanka Depot' },
-  { id: 8, name: 'Marathahalli Tank' },
-]
-
 function loadLeaflet(cb) {
   if (window.L) { cb(); return }
   if (!document.getElementById('leaflet-css')) {
@@ -28,7 +17,7 @@ function loadLeaflet(cb) {
   document.head.appendChild(script)
 }
 
-export default function DriverView({ driverName, defaultHubId = 1 }) {
+export default function DriverView({ driverName, defaultHubId = null }) {
   const today = new Date().toISOString().split('T')[0]
 
   const [hubId, setHubId]         = useState(defaultHubId)
@@ -38,11 +27,25 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
   const [error, setError]         = useState(null)
   const [delivered, setDelivered] = useState(new Set())
 
+  // Hubs fetched live from the real DB (replaces the old hardcoded HUB_OPTIONS)
+  const [hubOptions, setHubOptions] = useState([])
+
   const mapRef       = useRef(null)
   const leafletMap   = useRef(null)
   const markersLayer = useRef(null)
 
   useEffect(() => { loadLeaflet(() => {}) }, [])
+
+  useEffect(() => {
+    fetch(`${API}/hubs`)
+      .then(r => r.json())
+      .then(data => {
+        setHubOptions(data)
+        // If no hub was pre-selected from login, default to the first real hub
+        if (!hubId && data.length > 0) setHubId(data[0].id)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (route) setTimeout(() => drawDriverMap(), 100)
@@ -91,8 +94,6 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
       radius: 16, fillColor: '#0ea5e9', color: 'white', weight: 3, fillOpacity: 1,
     }).bindPopup(`<strong>🏗 Your Hub</strong><br>${route.hub.name}`).addTo(lyr)
 
-    // ✅ FIX: Use route_coords for the polyline (array of [lat, lng] pairs)
-    // Falls back to building coords from waypoints if route_coords is absent
     const coords = route.route_coords
       ? route.route_coords.map(c => [c.lat, c.lng])
       : [
@@ -102,7 +103,6 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
 
     L.polyline(coords, { color: '#f59e0b', weight: 3, opacity: 0.7, dashArray: '8 5' }).addTo(lyr)
 
-    // ✅ FIX: Iterate waypoints (not stops), handle both delivery and refill types
     route.waypoints.forEach(wp => {
       if (wp.type === 'delivery') {
         L.circleMarker([wp.lat, wp.lng], {
@@ -122,14 +122,13 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
     })
   }
 
-  const hubName = HUB_OPTIONS.find(h => h.id === hubId)?.name || ''
+  // Look up selected hub name from live hubOptions
+  const hubName = hubOptions.find(h => h.id === hubId)?.name || ''
 
-  // ✅ FIX: API returns total_delivery_stops, not total_stops
   const total     = route?.total_delivery_stops || 0
   const doneCount = delivered.size
   const pct       = total > 0 ? Math.round((doneCount / total) * 100) : 0
 
-  // ✅ FIX: Filter only delivery waypoints for the stop list and progress tracking
   const deliveryStops = route?.waypoints?.filter(wp => wp.type === 'delivery') || []
   const refillStops   = route?.waypoints?.filter(wp => wp.type === 'refill') || []
 
@@ -151,10 +150,15 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div className="form-group" style={{ margin: 0 }}>
             <label>Your Hub</label>
-            <select value={hubId} onChange={e => setHubId(parseInt(e.target.value))}>
-              {HUB_OPTIONS.map(h => (
-                <option key={h.id} value={h.id}>{h.name}</option>
-              ))}
+            <select value={hubId ?? ''} onChange={e => setHubId(parseInt(e.target.value))}>
+              {hubOptions.length === 0
+                ? <option disabled>Loading hubs…</option>
+                : hubOptions.map(h => (
+                    <option key={h.id} value={h.id}>
+                      {h.name} — {h.ward}
+                    </option>
+                  ))
+              }
             </select>
           </div>
           <div className="form-group" style={{ margin: 0 }}>
@@ -187,7 +191,6 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
           {/* Stats */}
           <div className="stats-bar">
             <div className="stat-card">
-              {/* ✅ FIX: Use total_delivery_stops from API */}
               <div className="stat-value">{route.total_delivery_stops}</div>
               <div className="stat-label">Total Stops</div>
             </div>
@@ -205,7 +208,6 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
               <div className="stat-value" style={{ color: 'var(--driver-a)' }}>{total - doneCount}</div>
               <div className="stat-label">Remaining</div>
             </div>
-            {/* ✅ NEW: Show refill stops count if any */}
             {refillStops.length > 0 && (
               <div className="stat-card">
                 <div className="stat-value" style={{ color: '#ef4444' }}>{refillStops.length}</div>
@@ -255,10 +257,9 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
                 </div>
               </div>
 
-              {/* ✅ FIX: Iterate ALL waypoints in order, rendering delivery and refill differently */}
+              {/* All waypoints in order — delivery and refill */}
               {route.waypoints.map((wp, idx) => {
                 if (wp.type === 'refill') {
-                  // Refill waypoint — show a prominent alert card
                   return (
                     <div
                       key={`refill-${wp.refill_number}-${idx}`}
@@ -289,7 +290,6 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
                 }
 
                 // Delivery waypoint
-                // ✅ FIX: API uses litres_delivered (not litres_needed) and order_id exists only on delivery
                 const done = delivered.has(wp.order_id)
                 return (
                   <div
@@ -302,7 +302,6 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{wp.citizen_name}</div>
                       <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>{wp.address}</div>
-                      {/* ✅ FIX: field is litres_delivered in the API response */}
                       <div style={{ fontSize: 13, color: 'var(--driver-a)' }}>💧 {wp.litres_delivered} litres</div>
                     </div>
                     <div>

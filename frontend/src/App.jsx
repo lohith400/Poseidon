@@ -1,18 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import OrderForm from './components/OrderForm'
 import AdminDashboard from './components/AdminDashboard'
 import DriverView from './components/DriverView'
 
-const HUB_OPTIONS = [
-  { id: 1, name: 'Whitefield Depot' },
-  { id: 2, name: 'Koramangala Tank' },
-  { id: 3, name: 'Hebbal Depot' },
-  { id: 4, name: 'Electronic City Depot' },
-  { id: 5, name: 'Jayanagar Tank' },
-  { id: 6, name: 'HSR Layout Borewell' },
-  { id: 7, name: 'Yelahanka Depot' },
-  { id: 8, name: 'Marathahalli Tank' },
-]
+const API = 'http://localhost:8000'
 
 export default function App() {
   const [currentRole, setCurrentRole] = useState(null)
@@ -25,11 +16,24 @@ export default function App() {
   const [citizenPass, setCitizenPass] = useState('')
   // Driver fields
   const [driverName, setDriverName] = useState('')
-  const [driverHubId, setDriverHubId] = useState(1)
+  const [driverHubId, setDriverHubId] = useState(null)
   const [driverPass, setDriverPass] = useState('')
   // Admin fields
   const [adminUser, setAdminUser] = useState('')
   const [adminPass, setAdminPass] = useState('')
+
+  // Hubs fetched live from the real DB (replaces the old hardcoded HUB_OPTIONS)
+  const [hubOptions, setHubOptions] = useState([])
+
+  useEffect(() => {
+    fetch(`${API}/hubs`)
+      .then(r => r.json())
+      .then(data => {
+        setHubOptions(data)
+        if (data.length > 0) setDriverHubId(data[0].id)
+      })
+      .catch(() => {})
+  }, [])
 
   function pickRole(role) {
     setSelectedRole(role)
@@ -175,10 +179,18 @@ export default function App() {
                 </div>
                 <div className="form-group">
                   <label>Assigned Hub</label>
-                  <select value={driverHubId} onChange={e => setDriverHubId(parseInt(e.target.value))}>
-                    {HUB_OPTIONS.map(h => (
-                      <option key={h.id} value={h.id}>{h.name}</option>
-                    ))}
+                  <select
+                    value={driverHubId ?? ''}
+                    onChange={e => setDriverHubId(parseInt(e.target.value))}
+                  >
+                    {hubOptions.length === 0
+                      ? <option disabled>Loading hubs…</option>
+                      : hubOptions.map(h => (
+                          <option key={h.id} value={h.id}>
+                            {h.name} — {h.ward}
+                          </option>
+                        ))
+                    }
                   </select>
                 </div>
                 <div className="form-group">

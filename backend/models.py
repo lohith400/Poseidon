@@ -5,12 +5,12 @@ from database import Base
 
 
 class WaterHub(Base):
-    """A water source point — BWSSB depot, borewell, community tank, etc."""
+    """A BWSSB Ground Level Reservoir (GLR) water source point."""
     __tablename__ = "water_hubs"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    hub_type = Column(String, default="bwssb_depot")  # bwssb_depot | borewell | community_tank
+    hub_type = Column(String, default="glr")  # glr | glr_stage5
     lat = Column(Float, nullable=False)
     lng = Column(Float, nullable=False)
     capacity_litres = Column(Integer, default=10000)
