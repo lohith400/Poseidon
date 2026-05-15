@@ -31,15 +31,15 @@ function loadLeaflet(cb) {
 export default function DriverView({ driverName, defaultHubId = 1 }) {
   const today = new Date().toISOString().split('T')[0]
 
-  const [hubId, setHubId]     = useState(defaultHubId)
-  const [date, setDate]       = useState(today)
-  const [route, setRoute]     = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState(null)
+  const [hubId, setHubId]         = useState(defaultHubId)
+  const [date, setDate]           = useState(today)
+  const [route, setRoute]         = useState(null)
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState(null)
   const [delivered, setDelivered] = useState(new Set())
 
-  const mapRef      = useRef(null)
-  const leafletMap  = useRef(null)
+  const mapRef       = useRef(null)
+  const leafletMap   = useRef(null)
   const markersLayer = useRef(null)
 
   useEffect(() => { loadLeaflet(() => {}) }, [])
@@ -91,27 +91,47 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
       radius: 16, fillColor: '#0ea5e9', color: 'white', weight: 3, fillOpacity: 1,
     }).bindPopup(`<strong>🏗 Your Hub</strong><br>${route.hub.name}`).addTo(lyr)
 
-    // Route line
-    const coords = [
-      [route.hub.lat, route.hub.lng],
-      ...route.stops.map(s => [s.lat, s.lng]),
-    ]
+    // ✅ FIX: Use route_coords for the polyline (array of [lat, lng] pairs)
+    // Falls back to building coords from waypoints if route_coords is absent
+    const coords = route.route_coords
+      ? route.route_coords.map(c => [c.lat, c.lng])
+      : [
+          [route.hub.lat, route.hub.lng],
+          ...route.waypoints.map(wp => [wp.lat, wp.lng]),
+        ]
+
     L.polyline(coords, { color: '#f59e0b', weight: 3, opacity: 0.7, dashArray: '8 5' }).addTo(lyr)
 
-    // Stop markers
-    route.stops.forEach(s => {
-      L.circleMarker([s.lat, s.lng], {
-        radius: 10, fillColor: '#f59e0b', color: 'white', weight: 2, fillOpacity: 0.9,
-      })
-        .bindPopup(`<strong>#${s.stop_number} ${s.citizen_name}</strong><br>${s.address}<br>${s.litres_needed} L`)
-        .addTo(lyr)
+    // ✅ FIX: Iterate waypoints (not stops), handle both delivery and refill types
+    route.waypoints.forEach(wp => {
+      if (wp.type === 'delivery') {
+        L.circleMarker([wp.lat, wp.lng], {
+          radius: 10, fillColor: '#f59e0b', color: 'white', weight: 2, fillOpacity: 0.9,
+        })
+          .bindPopup(
+            `<strong>#${wp.stop_number} ${wp.citizen_name}</strong><br>${wp.address}<br>${wp.litres_delivered} L`
+          )
+          .addTo(lyr)
+      } else if (wp.type === 'refill') {
+        L.circleMarker([wp.lat, wp.lng], {
+          radius: 10, fillColor: '#ef4444', color: 'white', weight: 2, fillOpacity: 0.9,
+        })
+          .bindPopup(`<strong>⛽ Refill Stop #${wp.refill_number}</strong><br>${wp.hub_name || 'Hub'}`)
+          .addTo(lyr)
+      }
     })
   }
 
-  const hubName   = HUB_OPTIONS.find(h => h.id === hubId)?.name || ''
-  const total     = route?.total_stops || 0
+  const hubName = HUB_OPTIONS.find(h => h.id === hubId)?.name || ''
+
+  // ✅ FIX: API returns total_delivery_stops, not total_stops
+  const total     = route?.total_delivery_stops || 0
   const doneCount = delivered.size
   const pct       = total > 0 ? Math.round((doneCount / total) * 100) : 0
+
+  // ✅ FIX: Filter only delivery waypoints for the stop list and progress tracking
+  const deliveryStops = route?.waypoints?.filter(wp => wp.type === 'delivery') || []
+  const refillStops   = route?.waypoints?.filter(wp => wp.type === 'refill') || []
 
   return (
     <div className="dashboard">
@@ -167,7 +187,8 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
           {/* Stats */}
           <div className="stats-bar">
             <div className="stat-card">
-              <div className="stat-value">{total}</div>
+              {/* ✅ FIX: Use total_delivery_stops from API */}
+              <div className="stat-value">{route.total_delivery_stops}</div>
               <div className="stat-label">Total Stops</div>
             </div>
             <div className="stat-card">
@@ -184,6 +205,13 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
               <div className="stat-value" style={{ color: 'var(--driver-a)' }}>{total - doneCount}</div>
               <div className="stat-label">Remaining</div>
             </div>
+            {/* ✅ NEW: Show refill stops count if any */}
+            {refillStops.length > 0 && (
+              <div className="stat-card">
+                <div className="stat-value" style={{ color: '#ef4444' }}>{refillStops.length}</div>
+                <div className="stat-label">Refill Stops</div>
+              </div>
+            )}
           </div>
 
           {/* Progress */}
@@ -227,26 +255,61 @@ export default function DriverView({ driverName, defaultHubId = 1 }) {
                 </div>
               </div>
 
-              {route.stops.map(stop => {
-                const done = delivered.has(stop.order_id)
+              {/* ✅ FIX: Iterate ALL waypoints in order, rendering delivery and refill differently */}
+              {route.waypoints.map((wp, idx) => {
+                if (wp.type === 'refill') {
+                  // Refill waypoint — show a prominent alert card
+                  return (
+                    <div
+                      key={`refill-${wp.refill_number}-${idx}`}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 14px', borderRadius: 10, marginBottom: 10,
+                        background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
+                      }}
+                    >
+                      <div style={{
+                        width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+                        background: 'rgba(239,68,68,0.25)', color: '#ef4444',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+                      }}>⛽</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: '#ef4444' }}>
+                          REFILL STOP #{wp.refill_number}
+                        </div>
+                        <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>
+                          {wp.message || `Return to hub and refill`}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
+                          Refill to {wp.capacity_after_refill?.toLocaleString()} L
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+
+                // Delivery waypoint
+                // ✅ FIX: API uses litres_delivered (not litres_needed) and order_id exists only on delivery
+                const done = delivered.has(wp.order_id)
                 return (
                   <div
-                    key={stop.order_id}
+                    key={wp.order_id}
                     className={`stop-card${done ? ' done' : ''}`}
                   >
                     <div className={`stop-num-circle${done ? ' done-circle' : ''}`}>
-                      {done ? '✓' : stop.stop_number}
+                      {done ? '✓' : wp.stop_number}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{stop.citizen_name}</div>
-                      <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>{stop.address}</div>
-                      <div style={{ fontSize: 13, color: 'var(--driver-a)' }}>💧 {stop.litres_needed} litres</div>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{wp.citizen_name}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>{wp.address}</div>
+                      {/* ✅ FIX: field is litres_delivered in the API response */}
+                      <div style={{ fontSize: 13, color: 'var(--driver-a)' }}>💧 {wp.litres_delivered} litres</div>
                     </div>
                     <div>
                       {done ? (
                         <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>Done ✓</span>
                       ) : (
-                        <button className="btn btn-success btn-sm" onClick={() => markDelivered(stop.order_id)}>
+                        <button className="btn btn-success btn-sm" onClick={() => markDelivered(wp.order_id)}>
                           ✓ Delivered
                         </button>
                       )}
