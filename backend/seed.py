@@ -348,5 +348,24 @@ for o in test_orders:
 
 db.commit()
 print(f"✓ {len(test_orders)} test orders seeded for {today}")
+
+from seed_history import seed_historical_data
+from seed_users import seed_users
+
+n_hist = seed_historical_data(db)
+print(f"✓ {n_hist} historical demand records seeded (or skipped if present)")
+
+seed_users(db)
+
+# Assign drivers to hubs (round-robin)
+all_hubs = db.query(WaterHub).order_by(WaterHub.id).all()
+all_drivers = db.query(Driver).order_by(Driver.id).all()
+for i, d in enumerate(all_drivers):
+    if not d.hub_id and all_hubs:
+        d.hub_id = all_hubs[i % len(all_hubs)].id
+db.commit()
+print(f"✓ Drivers linked to hubs")
+
 print("\nDone! Now run: uvicorn main:app --reload")
-print(f"Then call: POST http://localhost:8000/optimize/{today}")
+print(f"Login: citizen/citizen123  driver/driver123  admin/admin123")
+print(f"Then: POST http://localhost:8000/optimize/{today}")

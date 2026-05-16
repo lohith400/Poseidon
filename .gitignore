@@ -1,0 +1,21 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+
+# SQLite — regenerate via seed.py
+backend/water_delivery.db
+backend/*.db-journal
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# IDE / OS
+.vscode/
+.idea/
+*.log
+.DS_Store

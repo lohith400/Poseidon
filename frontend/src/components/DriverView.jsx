@@ -1,21 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-
-const API = 'http://localhost:8000'
-
-function loadLeaflet(cb) {
-  if (window.L) { cb(); return }
-  if (!document.getElementById('leaflet-css')) {
-    const link = document.createElement('link')
-    link.id = 'leaflet-css'
-    link.rel = 'stylesheet'
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-    document.head.appendChild(link)
-  }
-  const script = document.createElement('script')
-  script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-  script.onload = cb
-  document.head.appendChild(script)
-}
+import { api, coordsToLatLngs } from '../lib/api'
+import { loadLeaflet } from '../lib/mapLoader'
 
 export default function DriverView({ driverName, defaultHubId = null }) {
   const today = new Date().toISOString().split('T')[0]
@@ -37,26 +22,43 @@ export default function DriverView({ driverName, defaultHubId = null }) {
   useEffect(() => { loadLeaflet(() => {}) }, [])
 
   useEffect(() => {
-    fetch(`${API}/hubs`)
-      .then(r => r.json())
+    api('/hubs')
       .then(data => {
         setHubOptions(data)
-        // If no hub was pre-selected from login, default to the first real hub
         if (!hubId && data.length > 0) setHubId(data[0].id)
       })
       .catch(() => {})
   }, [])
 
   useEffect(() => {
+    if (defaultHubId) setHubId(defaultHubId)
+  }, [defaultHubId])
+
+  useEffect(() => {
     if (route) setTimeout(() => drawDriverMap(), 100)
   }, [route])
+
+  useEffect(() => {
+    if (!route) return undefined
+    const sendGps = () => {
+      const wps = route.waypoints?.filter(w => w.type === 'delivery') || []
+      const next = wps.find(w => !delivered.has(w.order_id))
+      const lat = next?.lat ?? route.hub.lat
+      const lng = next?.lng ?? route.hub.lng
+      api('/driver/location', {
+        method: 'POST',
+        body: JSON.stringify({ lat, lng, speed_kmh: 18, heading: 0 }),
+      }).catch(() => {})
+    }
+    sendGps()
+    const id = setInterval(sendGps, 10000)
+    return () => clearInterval(id)
+  }, [route, delivered])
 
   async function fetchRoute() {
     setLoading(true); setError(null)
     try {
-      const res = await fetch(`${API}/driver/${hubId}/${date}`)
-      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'No route found') }
-      const data = await res.json()
+      const data = await api(`/driver/${hubId}/${date}`)
       setRoute(data)
       setDelivered(new Set())
     } catch (err) {
@@ -68,7 +70,7 @@ export default function DriverView({ driverName, defaultHubId = null }) {
   }
 
   async function markDelivered(orderId) {
-    await fetch(`${API}/orders/${orderId}/deliver`, { method: 'PATCH' }).catch(() => {})
+    await api(`/orders/${orderId}/deliver`, { method: 'PATCH' }).catch(() => {})
     setDelivered(prev => new Set([...prev, orderId]))
   }
 
@@ -94,11 +96,11 @@ export default function DriverView({ driverName, defaultHubId = null }) {
       radius: 16, fillColor: '#0ea5e9', color: 'white', weight: 3, fillOpacity: 1,
     }).bindPopup(`<strong>🏗 Your Hub</strong><br>${route.hub.name}`).addTo(lyr)
 
-    const coords = route.route_coords
-      ? route.route_coords.map(c => [c.lat, c.lng])
+    const coords = route.route_coords?.length
+      ? coordsToLatLngs(route.route_coords)
       : [
           [route.hub.lat, route.hub.lng],
-          ...route.waypoints.map(wp => [wp.lat, wp.lng]),
+          ...(route.waypoints || []).map(wp => [wp.lat, wp.lng]),
         ]
 
     L.polyline(coords, { color: '#f59e0b', weight: 3, opacity: 0.7, dashArray: '8 5' }).addTo(lyr)
