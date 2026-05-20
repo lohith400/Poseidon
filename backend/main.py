@@ -21,7 +21,8 @@ from auth import (
 from capacity import available_litres, fill_percent, fulfill_delivery, release_reservation, reserve_for_order
 from config import CORS_ORIGINS, OSRM_ENABLED
 from database import get_db, migrate_schema
-from forecast import forecast_all_hubs, hub_forecast, PROPHET_AVAILABLE
+from forecast import forecast_all_hubs, hub_forecast
+from ml.forecast_engine import ML_MODELS_INFO, get_available_models, PROPHET_AVAILABLE
 from live_tracking import tanker_tracker
 from models import (
     DeliveryOrder,
@@ -185,6 +186,7 @@ def root():
         "message": "Poseidon Water Crisis Platform API v3",
         "features": {
             "forecasting": True,
+            "machine_learning": get_available_models(),
             "prophet": PROPHET_AVAILABLE,
             "osrm_routing": OSRM_ENABLED,
             "live_tanker_ws": True,
@@ -195,26 +197,45 @@ def root():
 
 # ── Crisis / forecasting ─────────────────────────────────────────────────────
 
+@app.get("/ml/models")
+def list_ml_models(_user: User = Depends(require_roles("admin"))):
+    """Catalog of installed ML models and availability."""
+    return {
+        "models": ML_MODELS_INFO,
+        "available": get_available_models(),
+        "default": "ensemble",
+        "description": (
+            "ensemble blends ARIMA, Holt-Winters, Prophet, and Gradient Boosting "
+            "weighted by back-test MAPE"
+        ),
+    }
+
+
 @app.get("/forecast")
 def get_all_forecasts(
     horizon: int = Query(14, ge=7, le=30),
+    model: str = Query(
+        "ensemble",
+        description="arima | holt_winters | prophet | gradient_boosting | seasonal_naive | ensemble",
+    ),
     db: Session = Depends(get_db),
     _user: User = Depends(require_roles("admin")),
 ):
-    return forecast_all_hubs(db, horizon)
+    return forecast_all_hubs(db, horizon, model=model)
 
 
 @app.get("/forecast/{hub_id}")
 def get_hub_forecast(
     hub_id: int,
     horizon: int = Query(14, ge=7, le=30),
+    model: str = Query("ensemble"),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
     hub = db.query(WaterHub).filter(WaterHub.id == hub_id).first()
     if not hub:
         raise HTTPException(status_code=404, detail="Hub not found")
-    return hub_forecast(db, hub, horizon)
+    return hub_forecast(db, hub, horizon, model=model)
 
 
 @app.get("/hubs/status")

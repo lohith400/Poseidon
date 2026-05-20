@@ -8,7 +8,8 @@ End-to-end **crisis intelligence** and **tanker dispatch** for Bengaluru: Prophe
 
 | Pillar | Implementation |
 |--------|----------------|
-| **Time-series forecasting** | `forecast.py` — Facebook Prophet when installed, else seasonal naive; 2yr historical demand + rainfall per GLR |
+| **Time-series forecasting (ML)** | **ARIMA**, **Holt-Winters**, **Prophet** (optional), **Gradient Boosting**, **weighted ensemble** — back-test MAPE per GLR |
+| **Shortage risk (ML)** | **Random Forest** classifier on fill, demand, rain, trend (fallback: rule-based) |
 | **Shortage risk** | 0–100 score per hub, `days_until_critical`, alerts like *"Whitefield likely critical in 5 days"* |
 | **Route optimization** | Capacity-constrained nearest-neighbor + **OSRM** road distances (fallback Haversine) |
 | **Driver assignment** | `driver_id` set on optimize from hub-linked drivers |
@@ -28,7 +29,8 @@ cd backend
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 pip install -r requirements-core.txt
-# Optional: pip install prophet   # better forecasts on Linux/macOS
+# Core ML: scikit-learn, statsmodels, numpy (ARIMA + Holt-Winters + Gradient Boosting)
+# Optional: pip install -r requirements.txt   # adds Prophet + pandas
 python seed.py                  # 70+ BWSSB GLRs, drivers, history, users
 uvicorn main:app --reload
 ```
@@ -69,7 +71,8 @@ App: http://localhost:5173 (proxies `/api` → backend)
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/auth/login` | JWT token |
-| GET | `/forecast` | All GLR shortage forecasts (admin) |
+| GET | `/forecast?model=ensemble` | All GLR forecasts — model: arima, holt_winters, prophet, gradient_boosting, ensemble |
+| GET | `/ml/models` | ML model catalog and availability |
 | GET | `/hubs/status` | Live fill % for heatmap |
 | POST | `/orders` | Book delivery (reserves hub water) |
 | POST | `/optimize/{date}` | OSRM routes + driver assign |

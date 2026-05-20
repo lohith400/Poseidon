@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../lib/api'
+import PageHeader from './PageHeader'
 
 const PRESET_LOCATIONS = [
   { label: 'Whitefield — ITPL Road',      lat: 12.9769, lng: 77.7480 },
@@ -19,102 +20,28 @@ const WATER_OPTIONS = [
   { litres: 12000, label: '12 000 L (Full Tanker)', price: '₹1,600' },
 ]
 
-// ── IoT Tank Monitor button — pulsing dot + label ─────────────────────────
 function IoTMonitorButton() {
-  const [hovered, setHovered] = useState(false)
-
   return (
     <a
       href="https://iot-smarttankmonitor.onrender.com"
       target="_blank"
       rel="noopener noreferrer"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display:        'inline-flex',
-        alignItems:     'center',
-        gap:            8,
-        padding:        '8px 16px',
-        borderRadius:   999,
-        background:     hovered
-          ? 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)'
-          : 'linear-gradient(135deg, rgba(14,165,233,0.15) 0%, rgba(6,182,212,0.15) 100%)',
-        border:         '1.5px solid',
-        borderColor:    hovered ? '#0ea5e9' : 'rgba(14,165,233,0.4)',
-        color:          hovered ? '#fff' : '#0ea5e9',
-        fontWeight:     600,
-        fontSize:       13,
-        letterSpacing:  0.3,
-        textDecoration: 'none',
-        cursor:         'pointer',
-        transition:     'all 0.2s ease',
-        boxShadow:      hovered
-          ? '0 0 18px rgba(14,165,233,0.45), 0 2px 8px rgba(0,0,0,0.2)'
-          : '0 0 0px transparent',
-        whiteSpace:     'nowrap',
-        userSelect:     'none',
-      }}
+      className="iot-btn"
     >
-      {/* Pulsing live dot */}
-      <span style={{ position: 'relative', display: 'flex', alignItems: 'center', width: 10, height: 10 }}>
-        <span style={{
-          position:     'absolute',
-          display:      'inline-flex',
-          width:        '100%',
-          height:       '100%',
-          borderRadius: '50%',
-          background:   hovered ? 'rgba(255,255,255,0.6)' : 'rgba(14,165,233,0.5)',
-          animation:    'iot-ping 1.4s cubic-bezier(0,0,0.2,1) infinite',
-        }} />
-        <span style={{
-          position:     'relative',
-          display:      'inline-flex',
-          width:        8,
-          height:       8,
-          borderRadius: '50%',
-          background:   hovered ? '#fff' : '#0ea5e9',
-        }} />
+      <span className="iot-dot-wrap">
+        <span className="iot-dot-ping" />
+        <span className="iot-dot" />
       </span>
-
-      {/* Icon + label */}
-      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        <svg
-          width="14" height="14" viewBox="0 0 24 24"
-          fill="none" stroke="currentColor"
-          strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-        >
-          {/* WiFi / signal arcs representing IoT */}
-          <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-          <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-          <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-          <circle cx="12" cy="20" r="1" fill="currentColor" />
-        </svg>
-        IoT Tank Monitor
-      </span>
-
-      {/* Arrow */}
-      <svg
-        width="11" height="11" viewBox="0 0 24 24"
-        fill="none" stroke="currentColor"
-        strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-        style={{ opacity: hovered ? 1 : 0.6, transition: 'opacity 0.2s' }}
-      >
-        <path d="M7 17L17 7M17 7H7M17 7v10" />
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+        <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+        <circle cx="12" cy="20" r="1" fill="currentColor" />
       </svg>
-
-      {/* Keyframe injection */}
-      <style>{`
-        @keyframes iot-ping {
-          0%   { transform: scale(1);   opacity: 0.75; }
-          75%  { transform: scale(2.2); opacity: 0;    }
-          100% { transform: scale(2.2); opacity: 0;    }
-        }
-      `}</style>
+      IoT Tank Monitor
     </a>
   )
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function OrderForm({ userName }) {
   const today = new Date().toISOString().split('T')[0]
@@ -174,37 +101,15 @@ export default function OrderForm({ userName }) {
 
   return (
     <div className="dashboard">
+      <PageHeader
+        icon="🚰"
+        title="Book Water Delivery"
+        subtitle="Enter your details. We'll find the nearest hub and optimise your delivery route."
+      >
+        <IoTMonitorButton />
+      </PageHeader>
 
-      {/* ── Page header with IoT button ── */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{
-          display:        'flex',
-          alignItems:     'center',
-          flexWrap:       'wrap',
-          gap:            14,
-          marginBottom:   6,
-        }}>
-          <h1 style={{
-            fontFamily: 'var(--font-head)',
-            fontSize:   28,
-            fontWeight: 800,
-            margin:     0,
-          }}>
-            🚰 Book Water Delivery
-          </h1>
-
-          {/* ← IoT Tank Monitor button sits right next to the title */}
-          <IoTMonitorButton />
-        </div>
-
-        <p style={{ color: 'var(--text-dim)', fontSize: 15, margin: 0 }}>
-          Enter your details. We'll find the nearest hub and optimise your delivery route.
-        </p>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
-
-        {/* ── Booking Form ── */}
+      <div className="layout-2col">
         <div className="card">
           <div className="card-title">📋 New Booking</div>
 
@@ -215,7 +120,6 @@ export default function OrderForm({ userName }) {
           )}
 
           <div className="form-grid">
-
             <div className="form-group col-span">
               <label>Select Location (Bengaluru) *</label>
               <select onChange={handleLocationSelect} defaultValue="">
@@ -248,19 +152,14 @@ export default function OrderForm({ userName }) {
 
             {selectedOption && (
               <div className="form-group col-span">
-                <div
-                  className="alert alert-info"
-                  style={{ margin: 0, fontSize: 13, display: 'flex', alignItems: 'center', gap: 10 }}
-                >
+                <div className="alert alert-info" style={{ margin: 0, fontSize: 13 }}>
                   {litres === 6000 ? (
                     <>
-                      💧 <strong>Half Tanker (6 000 L)</strong> — the driver may combine your
-                      delivery with another nearby 6 000 L order in one trip, saving fuel.
+                      💧 <strong>Half Tanker (6 000 L)</strong> — may be combined with a nearby order to save fuel.
                     </>
                   ) : (
                     <>
-                      🚛 <strong>Full Tanker (12 000 L)</strong> — the entire tanker is dedicated
-                      to your delivery. Driver fills up and comes directly to you.
+                      🚛 <strong>Full Tanker (12 000 L)</strong> — dedicated delivery straight to you.
                     </>
                   )}
                 </div>
@@ -279,12 +178,11 @@ export default function OrderForm({ userName }) {
 
             {lat && (
               <div className="form-group col-span">
-                <div className="alert alert-info" style={{ margin: 0, fontSize: 13 }}>
+                <div className="alert alert-info text-sm" style={{ margin: 0 }}>
                   📍 Coordinates: {lat}, {lng}
                 </div>
               </div>
             )}
-
           </div>
 
           <button
@@ -299,35 +197,34 @@ export default function OrderForm({ userName }) {
           </button>
         </div>
 
-        {/* ── Right Column ── */}
         <div>
           {result && (
-            <div className="card" style={{ borderLeft: '3px solid var(--success)', marginBottom: 20 }}>
+            <div className="card card-accent-success" style={{ marginBottom: 20 }}>
               <div className="card-title">✅ Booking Confirmed</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 14 }}>
-                <div><strong>Order ID</strong><br /><span style={{ color: 'var(--cyan)' }}>#{result.id}</span></div>
+              <div className="detail-grid">
+                <div><strong>Order ID</strong><br /><span className="text-accent">#{result.id}</span></div>
                 <div><strong>Status</strong><br /><span className="badge badge-pending">Pending</span></div>
                 <div><strong>Delivery Date</strong><br />{result.delivery_date}</div>
                 <div>
                   <strong>Water</strong><br />
                   {result.litres_needed?.toLocaleString()} L
-                  <span style={{ color: 'var(--text-dim)', fontSize: 12, marginLeft: 4 }}>
+                  <span className="text-muted" style={{ marginLeft: 4 }}>
                     ({result.litres_needed === 6000 ? 'Half Tanker' : 'Full Tanker'})
                   </span>
                 </div>
                 <div><strong>Hub Distance</strong><br />{result.hub_distance_km} km</div>
               </div>
-              <p style={{ marginTop: 12, fontSize: 13, color: 'var(--text-dim)' }}>
+              <p className="text-muted" style={{ marginTop: 12 }}>
                 {result.litres_needed === 6000
-                  ? 'Your order may be batched with a nearby 6 000 L order — saves fuel and gets faster delivery.'
-                  : 'A full tanker is reserved for your delivery. Driver fills up and heads straight to you.'}
+                  ? 'Your order may be batched with a nearby 6 000 L order for faster delivery.'
+                  : 'A full tanker is reserved for your delivery.'}
               </p>
             </div>
           )}
 
           <div className="card">
             <div className="card-title">💧 How It Works</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="step-list">
               {[
                 'Pick your Bengaluru area — 6 000 L or 12 000 L',
                 'System assigns the nearest BWSSB water hub',
@@ -335,88 +232,40 @@ export default function OrderForm({ userName }) {
                 'Driver refills at hub only when tank runs dry',
                 'You get your water on the chosen date ✓',
               ].map((step, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: 14 }}>
-                  <span style={{
-                    width: 32, height: 32, borderRadius: '50%',
-                    background: 'rgba(14,165,233,0.2)', color: 'var(--citizen-a)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, flexShrink: 0,
-                  }}>
-                    {i + 1}
-                  </span>
+                <div key={i} className="step-item">
+                  <span className="step-num">{i + 1}</span>
                   <span>{step}</span>
                 </div>
               ))}
             </div>
 
-            {/* Tanker size visual guide */}
-            <div style={{
-              marginTop: 20, padding: '14px 16px',
-              background: 'rgba(255,255,255,0.04)',
-              borderRadius: 10, fontSize: 13,
-            }}>
-              <div style={{ fontWeight: 700, marginBottom: 10, color: 'var(--text-dim)' }}>
-                🚛 Tanker Size Guide
+            <div className="tank-guide">
+              <div className="tank-guide-title">🚛 Tanker Size Guide</div>
+              <div className="tank-row">
+                <span>Half Tanker</span>
+                <span className="text-accent">6 000 L — ₹900</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Half Tanker</span>
-                  <span style={{ color: 'var(--cyan)', fontWeight: 600 }}>6 000 L — ₹900</span>
-                </div>
-                <div style={{
-                  height: 10, borderRadius: 5,
-                  background: 'rgba(14,165,233,0.15)',
-                  overflow: 'hidden',
-                }}>
-                  <div style={{
-                    width: '50%', height: '100%',
-                    background: 'var(--cyan)', borderRadius: 5,
-                  }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                  <span>Full Tanker</span>
-                  <span style={{ color: 'var(--success)', fontWeight: 600 }}>12 000 L — ₹1,600</span>
-                </div>
-                <div style={{
-                  height: 10, borderRadius: 5,
-                  background: 'rgba(14,165,233,0.15)',
-                  overflow: 'hidden',
-                }}>
-                  <div style={{
-                    width: '100%', height: '100%',
-                    background: 'var(--success)', borderRadius: 5,
-                  }} />
-                </div>
+              <div className="tank-bar">
+                <div className="tank-bar-fill" style={{ width: '50%', background: 'var(--sea)' }} />
+              </div>
+              <div className="tank-row">
+                <span>Full Tanker</span>
+                <span style={{ color: 'var(--success)', fontWeight: 600 }}>12 000 L — ₹1,600</span>
+              </div>
+              <div className="tank-bar">
+                <div className="tank-bar-fill" style={{ width: '100%', background: 'var(--success)' }} />
               </div>
             </div>
 
-            {/* ── IoT banner at bottom of card ── */}
-            <div style={{
-              marginTop:    20,
-              padding:      '14px 16px',
-              borderRadius: 10,
-              background:   'linear-gradient(135deg, rgba(14,165,233,0.08) 0%, rgba(6,182,212,0.12) 100%)',
-              border:       '1px solid rgba(14,165,233,0.25)',
-              display:      'flex',
-              alignItems:   'center',
-              justifyContent: 'space-between',
-              gap:          12,
-              flexWrap:     'wrap',
-            }}>
+            <div className="iot-banner">
               <div>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>
-                  📡 Smart Tank Monitor
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                  Real-time IoT sensor data for your tank level
-                </div>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>📡 Smart Tank Monitor</div>
+                <div className="text-muted">Real-time IoT sensor data for your tank level</div>
               </div>
               <IoTMonitorButton />
             </div>
-
           </div>
         </div>
-
       </div>
     </div>
   )

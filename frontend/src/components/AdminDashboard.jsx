@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { api, coordsToLatLngs, WS_URL } from '../lib/api'
 import { loadLeaflet } from '../lib/mapLoader'
 import CrisisDashboard from './CrisisDashboard'
+import PageHeader from './PageHeader'
 
 const HUB_COLORS = ['#00c6f7', '#f59e0b', '#8b5cf6', '#10b981', '#f43f5e', '#06b6d4', '#a855f7', '#84cc16']
 
@@ -210,19 +211,16 @@ export default function AdminDashboard() {
 
   return (
     <div className="dashboard">
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 28, fontWeight: 800, marginBottom: 6 }}>
-          Operations Dashboard
-        </h1>
-        <p style={{ color: 'var(--text-dim)', fontSize: 15 }}>
-          Forecasting, reservoir heatmaps, OSRM routes, live tanker tracking
-        </p>
-      </div>
+      <PageHeader
+        icon="🌊"
+        title="Operations Dashboard"
+        subtitle="Forecasting, reservoir heatmaps, OSRM routes, live tanker tracking"
+      />
 
       {activeTab !== 'crisis' && (
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, flexWrap: 'wrap' }}>
-            <div className="form-group" style={{ margin: 0 }}>
+          <div className="toolbar-row">
+            <div className="form-group">
               <label>Date</label>
               <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
             </div>

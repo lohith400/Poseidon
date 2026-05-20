@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { api, coordsToLatLngs } from '../lib/api'
 import { loadLeaflet } from '../lib/mapLoader'
+import PageHeader from './PageHeader'
 
 export default function DriverView({ driverName, defaultHubId = null }) {
   const today = new Date().toISOString().split('T')[0]
@@ -137,20 +138,16 @@ export default function DriverView({ driverName, defaultHubId = null }) {
   return (
     <div className="dashboard">
 
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 28, fontWeight: 800, marginBottom: 6 }}>
-          🚛 Your Route for Today
-        </h1>
-        <p style={{ color: 'var(--text-dim)', fontSize: 15 }}>
-          <span style={{ color: 'var(--driver-a)', fontWeight: 600 }}>{hubName}</span>
-          {' '}— optimised delivery schedule
-        </p>
-      </div>
+      <PageHeader
+        icon="🚛"
+        title="Your Route for Today"
+        subtitle={hubName ? `${hubName} — optimised delivery schedule` : 'Select your hub and load today\'s route'}
+      />
 
       {/* Controls */}
       <div className="card">
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div className="form-group" style={{ margin: 0 }}>
+        <div className="toolbar-row">
+          <div className="form-group">
             <label>Your Hub</label>
             <select value={hubId ?? ''} onChange={e => setHubId(parseInt(e.target.value))}>
               {hubOptions.length === 0
@@ -163,18 +160,9 @@ export default function DriverView({ driverName, defaultHubId = null }) {
               }
             </select>
           </div>
-          <div className="form-group" style={{ margin: 0 }}>
+          <div className="form-group">
             <label>Delivery Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              style={{
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 10, padding: '10px 14px', fontSize: 14,
-                color: 'var(--text)', fontFamily: 'var(--font-body)',
-              }}
-            />
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} />
           </div>
           <button className="btn btn-driver" onClick={fetchRoute} disabled={loading}>
             {loading ? <><span className="spin">⚙</span> Loading...</> : 'Load My Route →'}
@@ -220,7 +208,7 @@ export default function DriverView({ driverName, defaultHubId = null }) {
 
           {/* Progress */}
           <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+            <div className="progress-header">
               <span>Delivery Progress</span>
               <span style={{ fontWeight: 600, color: 'var(--success)' }}>{pct}%</span>
             </div>
@@ -230,14 +218,14 @@ export default function DriverView({ driverName, defaultHubId = null }) {
           </div>
 
           {/* Map + Stops */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div className="layout-2col">
 
             <div className="card">
               <div className="card-title">📍 Route Map — Start at {route.hub.name}</div>
               <div ref={mapRef} className="map-container" />
             </div>
 
-            <div className="card" style={{ maxHeight: 500, overflowY: 'auto' }}>
+            <div className="card card-scroll">
               <div className="card-title">📋 Your Stops — Follow This Order</div>
               <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 16 }}>
                 Optimised to minimise total travel distance.
